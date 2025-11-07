@@ -5,12 +5,10 @@ from telegram.ext import Application, MessageHandler, filters, ContextTypes
 from urllib.parse import urlparse, parse_qs
 import re
 import requests
-import time
 
-# Configurazione
-TOKEN = "8558980747:AAEF4ngeHIsIzjtLCuUwBh-qAka0GKfgdIw"
-AFFILIATE_TAG = "bot3d-21"
-# === FINE CONFIGURAZIONE ===
+# Configurazione da variabili d'ambiente
+TOKEN = os.getenv('8558980747:AAEF4ngeHIsIzjtLCuUwBh-qAka0GKfgdIw')
+AFFILIATE_TAG = os.getenv('AFFILIATE_TAG', 'bot3d-21')
 
 # Setup logging
 logging.basicConfig(
@@ -20,16 +18,28 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 def expand_short_url(short_url: str) -> str:
-    """Espande URL abbreviati (versione sincrona per PythonAnywhere)"""
+    """Espande URL abbreviati"""
     try:
-        response = requests.get(short_url, allow_redirects=False, timeout=10)
-        if response.status_code in (301, 302, 303, 307, 308):
-            location = response.headers.get('Location')
-            if location:
-                return location
-        return short_url
+        headers = {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
+            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+        }
+        
+        response = requests.get(
+            short_url, 
+            headers=headers, 
+            allow_redirects=True, 
+            timeout=10,
+            stream=True
+        )
+        final_url = response.url
+        response.close()
+        
+        logger.info(f"URL espanso: {short_url} -> {final_url}")
+        return final_url
+        
     except Exception as e:
-        logger.error(f"Errore espansione URL: {e}")
+        logger.error(f"Errore espansione URL {short_url}: {e}")
         return short_url
 
 def extract_product_id(url: str) -> str:
@@ -85,7 +95,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             expanded_url = url
             if 'amzn.' in url.lower():
                 expanded_url = expand_short_url(url)
-                logger.info(f"URL abbreviato {url} espanso in {expanded_url}")
             
             # Estrai ID prodotto
             product_id = extract_product_id(expanded_url)
@@ -105,7 +114,7 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 logger.warning(f"Impossibile cancellare messaggio: {e}")
             
             # Invia risposta
-            response = "" #"✅ Link affiliato generato:\n\n" + "\n\n".join(modified_links)
+            response = "✅ Link affiliato generato:\n\n" + "\n\n".join(modified_links)
             await update.message.reply_text(response)
             
     except Exception as e:
@@ -114,13 +123,14 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def main():
     """Avvia il bot"""
-    # Crea applicazione
+    if not TOKEN:
+        logger.error("TELEGRAM_BOT_TOKEN non configurato!")
+        return
+
     application = Application.builder().token(TOKEN).build()
-    
-    # Aggiungi handler
     application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
     
-    logger.info("Bot avviato su PythonAnywhere!")
+    logger.info("Bot avviato su Render!")
     application.run_polling()
 
 if __name__ == "__main__":
