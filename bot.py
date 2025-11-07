@@ -8,8 +8,8 @@ import requests
 import time
 
 # Configurazione
-TOKEN = os.getenv('8558980747:AAEF4ngeHIsIzjtLCuUwBh-qAka0GKfgdIw')
-AFFILIATE_TAG = os.getenv('AFFILIATE_TAG', 'bot3d-21')
+TOKEN = "8558980747:AAEF4ngeHIsIzjtLCuUwBh-qAka0GKfgdIw"
+AFFILIATE_TAG = "bot3d-21"
 
 # Setup logging
 logging.basicConfig(
@@ -127,4 +127,5 @@ def main():
     application.run_polling()
 
 if __name__ == "__main__":
+
     main()
