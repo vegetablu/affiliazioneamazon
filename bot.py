@@ -1,10 +1,13 @@
 import os
 import logging
+import time
+import sys
 from telegram import Update
 from telegram.ext import Application, MessageHandler, filters, ContextTypes
 from urllib.parse import urlparse, parse_qs
 import re
 import requests
+import asyncio
 
 # Setup logging
 logging.basicConfig(
@@ -13,6 +16,16 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# Aspetta che Render carichi le variabili d'ambiente
+logger.info("Avvio bot...")
+time.sleep(3)
+
+# Configurazione
+TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
+AFFILIATE_TAG = os.getenv('AFFILIATE_TAG', 'bot3d-21')
+
+logger.info(f"Configurazione caricata - Token: {bool(TOKEN)}")
+
 def expand_short_url(short_url: str) -> str:
     """Espande URL abbreviati"""
     try:
@@ -20,14 +33,13 @@ def expand_short_url(short_url: str) -> str:
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
         }
         
-        response = requests.get(
-            short_url, 
-            headers=headers, 
-            allow_redirects=True, 
-            timeout=10
-        )
+        # Usa una sessione con timeout
+        session = requests.Session()
+        session.headers.update(headers)
+        
+        response = session.get(short_url, allow_redirects=True, timeout=15)
         final_url = response.url
-        response.close()
+        session.close()
         
         logger.info(f"URL espanso: {short_url} -> {final_url}")
         return final_url
@@ -41,7 +53,7 @@ def extract_product_id(url: str) -> str:
     try:
         patterns = [
             r'/dp/([A-Z0-9]{10})',
-            r'/gp/product/([A-Z0-9]{10})',
+            r'/gp/product/([A-Z0-9]{10})', 
             r'/product/([A-Z0-9]{10})',
             r'/([A-Z0-9]{10})(?:[/?]|$)',
         ]
@@ -106,22 +118,55 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             
     except Exception as e:
         logger.error(f"Errore in handle_message: {e}")
-        await update.message.reply_text("❌ Si è verificato un errore durante l'elaborazione")
+        try:
+            await update.message.reply_text("❌ Si è verificato un errore durante l'elaborazione")
+        except:
+            pass
+
+async def post_init(application: Application):
+    """Funzione chiamata dopo l'inizializzazione"""
+    logger.info("Bot inizializzato correttamente!")
+    try:
+        # Prova a ottenere le info del bot
+        bot_info = await application.bot.get_me()
+        logger.info(f"Bot @{bot_info.username} pronto!")
+    except Exception as e:
+        logger.error(f"Errore nel post_init: {e}")
+
+async def post_stop(application: Application):
+    """Funzione chiamata quando il bot si ferma"""
+    logger.info("Bot fermato")
 
 def main():
     """Avvia il bot"""
-    TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
-    AFFILIATE_TAG = os.getenv('AFFILIATE_TAG', 'bot3d-21')
-    
     if not TOKEN:
         logger.error("TELEGRAM_BOT_TOKEN non configurato!")
-        return
+        sys.exit(1)
 
-    application = Application.builder().token(TOKEN).build()
-    application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
-    
-    logger.info("Bot avviato su Render!")
-    application.run_polling()
+    try:
+        # Crea l'applicazione con gestione errori
+        application = (
+            Application.builder()
+            .token(TOKEN)
+            .post_init(post_init)
+            .post_stop(post_stop)
+            .build()
+        )
+        
+        application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
+        
+        logger.info("Avvio polling...")
+        
+        # Avvia il polling con gestione errori
+        application.run_polling(
+            allowed_updates=Update.ALL_TYPES,
+            close_loop=False,
+            stop_signals=None  # Disabilita i segnali di stop per Render
+        )
+        
+    except Exception as e:
+        logger.error(f"Errore critico: {e}")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
