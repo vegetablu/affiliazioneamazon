@@ -6,11 +6,6 @@ from urllib.parse import urlparse, parse_qs
 import re
 import requests
 
-# Configurazione da variabili d'ambiente
-TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
-#TOKEN = "8558980747:AAEF4ngeHIsIzjtLCuUwBh-qAka0GKfgdIw"
-AFFILIATE_TAG = os.getenv('AFFILIATE_TAG', 'bot3d-21')
-
 # Setup logging
 logging.basicConfig(
     format='%(asctime)s - %(name)s - %(levelname)s - %(message)s',
@@ -23,15 +18,13 @@ def expand_short_url(short_url: str) -> str:
     try:
         headers = {
             'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36',
-            'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
         }
         
         response = requests.get(
             short_url, 
             headers=headers, 
             allow_redirects=True, 
-            timeout=10,
-            stream=True
+            timeout=10
         )
         final_url = response.url
         response.close()
@@ -77,7 +70,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text("Per favore invia un link Amazon valido")
             return
 
-        # Cerca URL
         urls = re.findall(r'https?://[^\s]+', user_message)
         
         if not urls:
@@ -87,34 +79,28 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         modified_links = []
         
         for url in urls:
-            # Verifica se è Amazon
             if not re.search(r'amazon\.|amzn\.(to|eu)', url.lower()):
                 await update.message.reply_text(f"❌ {url} non è un link Amazon valido")
                 continue
                 
-            # Espandi se è abbreviato
             expanded_url = url
             if 'amzn.' in url.lower():
                 expanded_url = expand_short_url(url)
             
-            # Estrai ID prodotto
             product_id = extract_product_id(expanded_url)
             if not product_id:
                 await update.message.reply_text(f"❌ Impossibile estrarre l'ID prodotto da: {url}")
                 continue
 
-            # Crea URL affiliato
             affiliate_url = f"https://www.amazon.it/dp/{product_id}?tag={AFFILIATE_TAG}"
             modified_links.append(affiliate_url)
 
         if modified_links:
-            # Cancella messaggio originale
             try:
                 await update.message.delete()
             except Exception as e:
                 logger.warning(f"Impossibile cancellare messaggio: {e}")
             
-            # Invia risposta
             response = "✅ Link affiliato generato:\n\n" + "\n\n".join(modified_links)
             await update.message.reply_text(response)
             
@@ -124,16 +110,11 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def main():
     """Avvia il bot"""
-    # DEBUG: Verifica che le variabili d'ambiente siano caricate
-    print("=== DEBUG VARIABILI AMBIENTE ===")
-    print(f"TELEGRAM_BOT_TOKEN presente: {'SI' if os.getenv('TELEGRAM_BOT_TOKEN') else 'NO'}")
-    print(f"AFFILIATE_TAG: {os.getenv('AFFILIATE_TAG')}")
-    print("================================")
+    TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
+    AFFILIATE_TAG = os.getenv('AFFILIATE_TAG', 'bot3d-21')
     
     if not TOKEN:
         logger.error("TELEGRAM_BOT_TOKEN non configurato!")
-        # Mostra tutte le variabili d'ambiente disponibili (per debug)
-        print("Variabili d'ambiente disponibili:", list(os.environ.keys()))
         return
 
     application = Application.builder().token(TOKEN).build()
@@ -144,6 +125,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-
-
-
