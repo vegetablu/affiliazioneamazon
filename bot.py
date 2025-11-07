@@ -8,6 +8,7 @@ import requests
 
 # Configurazione da variabili d'ambiente
 TOKEN = os.getenv('8558980747:AAEF4ngeHIsIzjtLCuUwBh-qAka0GKfgdIw')
+TOKEN = "8558980747:AAEF4ngeHIsIzjtLCuUwBh-qAka0GKfgdIw"
 AFFILIATE_TAG = os.getenv('AFFILIATE_TAG', 'bot3d-21')
 
 # Setup logging
@@ -143,4 +144,5 @@ def main():
 
 if __name__ == "__main__":
     main()
+
 
