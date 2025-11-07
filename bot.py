@@ -123,8 +123,16 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def main():
     """Avvia il bot"""
+    # DEBUG: Verifica che le variabili d'ambiente siano caricate
+    print("=== DEBUG VARIABILI AMBIENTE ===")
+    print(f"TELEGRAM_BOT_TOKEN presente: {'SI' if os.getenv('TELEGRAM_BOT_TOKEN') else 'NO'}")
+    print(f"AFFILIATE_TAG: {os.getenv('AFFILIATE_TAG')}")
+    print("================================")
+    
     if not TOKEN:
         logger.error("TELEGRAM_BOT_TOKEN non configurato!")
+        # Mostra tutte le variabili d'ambiente disponibili (per debug)
+        print("Variabili d'ambiente disponibili:", list(os.environ.keys()))
         return
 
     application = Application.builder().token(TOKEN).build()
@@ -135,3 +143,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
