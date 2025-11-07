@@ -10,6 +10,7 @@ import time
 # Configurazione
 TOKEN = "8558980747:AAEF4ngeHIsIzjtLCuUwBh-qAka0GKfgdIw"
 AFFILIATE_TAG = "bot3d-21"
+# === FINE CONFIGURAZIONE ===
 
 # Setup logging
 logging.basicConfig(
@@ -113,10 +114,6 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 def main():
     """Avvia il bot"""
-    if not TOKEN:
-        logger.error("TELEGRAM_BOT_TOKEN non configurato!")
-        return
-
     # Crea applicazione
     application = Application.builder().token(TOKEN).build()
     
@@ -127,5 +124,4 @@ def main():
     application.run_polling()
 
 if __name__ == "__main__":
-
     main()
