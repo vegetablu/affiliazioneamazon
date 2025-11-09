@@ -1,13 +1,14 @@
 import os
 import logging
-import time
 from telegram import Update
 from telegram.ext import Application, MessageHandler, filters, ContextTypes
 from urllib.parse import urlparse, parse_qs
 import re
 import requests
-from flask import Flask
-import threading
+
+# Configurazione da variabili d'ambiente
+TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
+AFFILIATE_TAG = os.getenv('AFFILIATE_TAG', 'bot3d-21')
 
 # Setup logging
 logging.basicConfig(
@@ -15,21 +16,6 @@ logging.basicConfig(
     level=logging.INFO
 )
 logger = logging.getLogger(__name__)
-
-# Configurazione
-TOKEN = os.getenv('TELEGRAM_BOT_TOKEN')
-AFFILIATE_TAG = os.getenv('AFFILIATE_TAG', 'bot3d-21')
-
-# Flask app per Render Web Service
-app = Flask(__name__)
-
-@app.route('/')
-def home():
-    return "✅ Amazon Affiliate Bot è online!"
-
-@app.route('/health')
-def health():
-    return "OK", 200
 
 def expand_short_url(short_url: str) -> str:
     """Espande URL abbreviati"""
@@ -127,10 +113,8 @@ async def handle_message(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except:
             pass
 
-def run_bot():
-    """Avvia il bot Telegram in un thread separato"""
-    time.sleep(5)  # Aspetta che Flask si avvii
-    
+def main():
+    """Avvia il bot"""
     if not TOKEN:
         logger.error("TELEGRAM_BOT_TOKEN non configurato!")
         return
@@ -139,26 +123,13 @@ def run_bot():
         application = Application.builder().token(TOKEN).build()
         application.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, handle_message))
         
-        logger.info("✅ Bot Telegram avviato!")
+        logger.info("✅ Bot avviato correttamente su Railway!")
         logger.info("📱 Pronto a ricevere messaggi...")
         
         application.run_polling()
         
     except Exception as e:
-        logger.error(f"Errore critico nel bot: {e}")
-
-def run_flask():
-    """Avvia il server Flask per Render"""
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port)
+        logger.error(f"Errore critico nell'avvio: {e}")
 
 if __name__ == "__main__":
-    logger.info("🚀 Avvio applicazione...")
-    
-    # Avvia il bot in un thread separato
-    bot_thread = threading.Thread(target=run_bot)
-    bot_thread.daemon = True
-    bot_thread.start()
-    
-    # Avvia Flask nel thread principale
-    run_flask()
+    main()
